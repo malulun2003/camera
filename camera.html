@@ -1,0 +1,115 @@
+
+<html>
+<head>
+    <meta charset="UTF-8">
+    <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
+    <!-- <title>WEBカメラの映像を表示</title>   -->
+    <title>Node.jsで画像を保存</title>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <!-- <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.0/socket.io.js"></script> -->
+</head>
+<body>
+    <main>
+        <!-- <canvas id="canvas" width="1280px" height="720px"></canvas>
+        <video id="camera" width="1280px" height="720px" style="display:none;"></video> -->
+        <!-- 低解像度 -->
+        <canvas id="canvas" width="640px" height="480px"></canvas>
+        <video id="camera" width="640px" height="480px" style="display:none;"></video>
+        <br>
+        <button type="button" id="btn">ボタン</button>
+    </main>
+    <script>
+        // const socket = io();
+        const $btn = $('#btn');
+        const camera = document.getElementById('camera');
+        const canvas = document.getElementById('canvas');
+        ctx = canvas.getContext('2d');
+        
+        const init = () => {
+            setCamera();
+            // setSocket();
+            setBtn();
+        };
+        
+        const setCamera = () => {
+            // カメラ起動
+            const constrains = { video: {width: 640, height: 480}, audio: false };
+            navigator.mediaDevices.getUserMedia(constrains)
+            .then((stream) => {
+                camera.srcObject = stream;
+                camera.play();
+                drawCanvas();
+            });
+        };
+        const drawCanvas = () => {
+            let px = 0;
+            ctx = canvas.getContext('2d');
+            const draw = function(){
+                // // ctx.scale(0.5, 1.0);
+                // ctx.drawImage(camera, 0, 0);
+
+                // // 線の幅を設定
+                // ctx.lineWidth = 10;
+
+                // // 壁
+                // ctx.strokeRect(75, 140, 150, 110);
+
+                // // ドア
+                // ctx.fillRect(130+px, 190, 40, 60);
+
+                // // 屋根
+                // ctx.beginPath();
+                // ctx.moveTo(50, 140);
+                // ctx.lineTo(150, 60);
+                // ctx.lineTo(250, 140);
+                // ctx.closePath();
+                // ctx.stroke();
+
+                // px+=1;
+
+                
+                ctx.beginPath();
+                ctx.rect(40,40,40,30);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.transform(2,1,1,2,-100,-100);
+                ctx.rect(40,40,40,30);
+                ctx.stroke();
+            }
+            setInterval(draw, 100);
+        };
+        
+        // const setSocket = () => {
+        //     socket.on('msg', (val) => {
+        //         $btn.text(val);
+        //     });
+        // };
+        
+        const setBtn = () => {
+            
+            const getNow = () => {
+                let dt = new Date(),
+                y = dt.getFullYear(),
+                m = ('00' + (dt.getMonth()+1)).slice(-2),
+                d = ('00' + dt.getDate()).slice(-2),
+                h = ('00' + dt.getHours()).slice(-2),
+                min = ('00' + dt.getMinutes()).slice(-2),
+                s = ('00' + dt.getSeconds()).slice(-2);
+                return `${y}-${m}-${d}T${h}${min}${s}`;
+            };
+            
+            $btn.on('click', function(){
+                $btn.text('保存中…');
+                let data = {
+                    "date": getNow(),
+                    "img": canvas.toDataURL("image/jpeg")
+                };
+                // socket.emit('recImg', data);
+            });
+        };
+        
+        init();
+    </script>
+</body>
+</html>

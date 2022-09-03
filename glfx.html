@@ -1,0 +1,33 @@
+<script src="glfx.js"></script>
+<script>
+window.onload = function() {
+    try {
+        var canvas_fx = fx.canvas();
+    } catch (e) {
+        alert(e);
+        return;
+    }
+    var placeholder = document.getElementById('placeholder');
+    canvas_fx.replace(placeholder);
+    const init = () => {
+        const constrains = { video: {width: 640, height: 480}, audio: true };
+        navigator.mediaDevices.getUserMedia(constrains)
+        .then((stream) => {
+            camera.srcObject = stream;
+            camera.play();
+            drawCanvas();
+        });
+    };
+    const drawCanvas = () => {
+        const draw = function(){
+            ctx_tex = canvas_fx.texture(camera);
+            canvas_fx.draw(ctx_tex).perspective([100, 100, 200, 100, 100, 200, 200, 200], [0, 0, 200, 0, 0, 200, 200, 200]).update();
+        }
+        setInterval(draw, 100);
+    };
+    init();
+};
+
+</script>
+<video id="camera" width="640px" height="480px"></video><br>
+<span id="placeholder">Loading...</span>
