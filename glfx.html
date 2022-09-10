@@ -1,33 +1,170 @@
 <script src="glfx.js"></script>
 <script>
-window.onload = function() {
-    try {
-        var canvas_fx = fx.canvas();
-    } catch (e) {
-        alert(e);
-        return;
+    var timer;
+    var canvas_fx;
+    var dx,dy;
+    var objWidth, objHeight;
+    var points, tsc;
+    var dragging = [false, false, false, false];
+    var p_ctx;
+
+    function OnFrChange() {
+        drawCanvas(document.getElementById('fr-select').value);
     }
-    var placeholder = document.getElementById('placeholder');
-    canvas_fx.replace(placeholder);
-    const init = () => {
-        const constrains = { video: {width: 640, height: 480}, audio: true };
-        navigator.mediaDevices.getUserMedia(constrains)
-        .then((stream) => {
-            camera.srcObject = stream;
-            camera.play();
-            drawCanvas();
-        });
-    };
-    const drawCanvas = () => {
+
+    const drawCanvas = (framerate) => {
         const draw = function(){
             ctx_tex = canvas_fx.texture(camera);
-            canvas_fx.draw(ctx_tex).perspective([100, 100, 200, 100, 100, 200, 200, 200], [0, 0, 200, 0, 0, 200, 200, 200]).update();
-        }
-        setInterval(draw, 100);
+            canvas_fx.draw(ctx_tex).perspective(
+                [dx[0], dy[0], dx[1], dy[1], dx[2], dy[2], dx[3], dy[3]],
+                [0, 0, 640, 0, 0, 480, 640, 480]
+            ).update();
+       }
+        if (timer) clearInterval(timer);
+        timer = setInterval(draw, framerate);
     };
-    init();
-};
 
+    window.onload = function() {
+        tsc = document.getElementById("screen_top");
+        tsc.addEventListener('mousedown', onDownSc, false);
+        // tsc.addEventListener('mousemove', onMoveSc, false);
+        // tsc.addEventListener('mouseup', onUpSc, false);
+
+        points = document.getElementById("points");
+        p_ctx = points.getContext('2d');
+        points.addEventListener('mousedown', onDown, false);
+        points.addEventListener('mousemove', onMove, false);
+        points.addEventListener('mouseup', onUp, false);
+        try {
+            canvas_fx = fx.canvas();
+        } catch (e) {
+            alert(e);
+            return;
+        }
+        var sc = document.getElementById('screen');
+        canvas_fx.replace(sc);
+        const init = (_fr) => {
+            const constrains = { video: {width: 640, height: 480, top: 500}, audio: true };
+            navigator.mediaDevices.getUserMedia(constrains)
+            .then((stream) => {
+                camera.srcObject = stream;
+                camera.play();
+                drawCanvas(_fr);
+            });
+        };
+        init(document.getElementById('fr-select').value);
+        drag_init();
+    };
+
+    function draw_mark() {
+        let txt = ["UL", "UR", "DL", "DR"];
+        for (let i = 0; i < 4; i++) {
+            p_ctx.beginPath();
+            p_ctx.arc(dx[i], dy[i], 10, 0, Math.PI*2, true);
+            p_ctx.strokeStyle = 'red';
+            p_ctx.lineWidth = 2;
+            p_ctx.font = '8pt Arial';
+            p_ctx.textAlign = "center";
+            p_ctx.textBaseline = "middle";
+            p_ctx.fillStyle = "rgb(255, 255, 255)" ;
+            p_ctx.fill();
+            p_ctx.stroke();
+            p_ctx.fillStyle = 'rgb(0, 0, 0)';
+            p_ctx.fillText(txt[i], dx[i], dy[i]);
+            p_ctx.stroke();
+        }
+    }
+
+    function drag_init() {
+        objWidth = 40;
+        objHeight = 40;
+        dx = [0, 0, 0, 0];
+        dy = [0, 0, 0, 0];
+        for (let i = 0; i < 4; i++) {
+            dx[i] = 20+(i%2)*(points.width-40);
+            dy[i] = 20+((i&2)>>1)*(points.height-40);
+        }
+        drawMark();
+    }
+
+    function drawMark() {
+        p_ctx.clearRect(0, 0, points.width, points.height); // キャンバスをクリア
+        draw_mark();
+    }
+
+    function onDownSc(e) {
+        let x = e.clientX - tsc.getBoundingClientRect().left;
+        let y = e.clientY - tsc.getBoundingClientRect().top;
+        console.log("screen_touch",x, y);
+    }
+
+    function onDown(e) {
+        let x = e.clientX - points.getBoundingClientRect().left;
+        let y = e.clientY - points.getBoundingClientRect().top;
+        for (let i = 0; i < 4; i++) {
+            if (dx[i]-objWidth/2 < x && (dx[i] + objWidth/2) > x && dy[i]-objHeight/2 < y && (dy[i] + objHeight/2) > y) {
+                dragging[i] = true;
+                relX = dx[i] - x;
+                relY = dy[i] - y;
+                break;
+            }
+        }
+    }
+
+    function onMove(e) {
+        let x = e.clientX - points.getBoundingClientRect().left;
+        let y = e.clientY - points.getBoundingClientRect().top;
+        for (let i = 0; i < 4; i++) {
+            if (dragging[i]) {
+                dx[i] = x + relX;
+                dy[i] = y + relY;
+                drawMark();
+            }
+        }
+    }
+
+    function onUp(e) {
+        dragging = [false, false, false, false]; // ドラッグ終了
+    }
 </script>
-<video id="camera" width="640px" height="480px"></video><br>
-<span id="placeholder">Loading...</span>
+<div class="wrap">
+    <div class="canvas-layer" style="width:640px; height:480px">
+        <video class="canvas" id="camera"  style="width:640px; height:480px"></video>
+        <canvas class="canvas" id="points" width="640px" height="480px"></canvas>
+    </div>
+    <div id="screen_top" style="width:640px; height:480px">
+        <span id="screen" top="500" style="width:640px; height:480px">Loading...</span>
+    </div>
+    <div>
+        <label for="fr-select">framerate:</label>        
+        <select name="fr" id="fr-select" onchange="OnFrChange()">
+            <option value="1000">1000ms</option>
+            <option value="500">500ms</option>
+            <option value="300">300ms</option>
+            <option value="100" selected>100ms</option>
+            <option value="50">50ms</option>
+        </select>
+    </div>
+</div>
+<style type="text/css">
+    body {
+        margin: 0px;
+    }
+    .canvas-layer{
+        position: relative;
+    }
+    .canvas{
+        position: absolute;
+        left:0;
+        top:0;
+        border: 0;
+        max-width:100%;
+        box-sizing: content-box;
+        padding: 0;
+        margin: 0;
+    }
+    .wrap {
+        display:flex;
+        flex-flow: column;
+    }
+</style>
